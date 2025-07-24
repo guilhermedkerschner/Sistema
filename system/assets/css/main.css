@@ -1,0 +1,395 @@
+/**
+ * Main CSS for the entire application
+ * Sistema Eai Cidadão! - Prefeitura de Santa Izabel do Oeste
+ */
+
+/* Reset e estilos base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #64b5f6 0%, #6aabec 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Estilos do cabeçalho */
+.header {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.municipality-logo {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.municipality-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.title-container h1 {
+    color: #0d47a1;
+    font-weight: 600;
+    font-size: 1.8rem;
+}
+
+.municipality-name {
+    color: #000000;
+    font-size: 1rem;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* Área de login */
+.login-area {
+    display: flex;
+    gap: 10px;
+}
+
+.login-button {
+    background-color: #fff;
+    padding: 10px 20px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.login-button i {
+    margin-right: 8px;
+}
+
+.user-login {
+    color: #2e7d32;
+}
+
+.user-login:hover {
+    background-color: #2e7d32;
+    color: #fff;
+}
+
+.admin-login {
+    color: #0d47a1;
+}
+
+.admin-login:hover {
+    background-color: #0d47a1;
+    color: #fff;
+}
+
+/* Estilo para o botão do usuário logado */
+.user-logged-in {
+    position: relative;
+}
+
+.user-button {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.user-button:hover {
+    background-color: #c8e6c9;
+}
+
+.user-button i {
+    margin-right: 8px;
+}
+
+/* Menu dropdown */
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.user-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    color: #333;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.dropdown-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.dropdown-item i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+/* Botão voltar */
+.back-button {
+    background-color: #0d47a1;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.back-button i {
+    margin-right: 8px;
+}
+
+.back-button:hover {
+    background-color: #083378;
+    transform: translateY(-2px);
+}
+
+.header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Container principal */
+.container {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    width: 100%;
+    max-width: 1200px;
+    z-index: 1;
+    margin-bottom: 20px;
+}
+
+/* Estilos para títulos de seção */
+.section-title {
+    color: #0d47a1;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    font-size: 1.5rem;
+}
+
+.section-title i {
+    margin-right: 10px;
+    color: #e91e63;
+    font-size: 1.5rem;
+}
+
+/* Estilos para texto introdutório */
+.intro-text {
+    margin-bottom: 30px;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Rodapé */
+footer {
+    background-color: rgba(255, 255, 255, 0.95);
+    width: 100%;
+    max-width: 1200px;
+    padding: 15px;
+    text-align: center;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: auto;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+    color: white;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+.loading-text {
+    font-size: 18px;
+    text-align: center;
+    max-width: 80%;
+}
+
+/* Status Message */
+.status-message {
+    padding: 15px;
+    margin: 20px auto;
+    max-width: 1200px;
+    width: 100%;
+    border-radius: 5px;
+    display: none;
+    position: relative;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.status-message.success {
+    background-color: #d4edda;
+    border-left: 5px solid #4CAF50;
+    color: #155724;
+}
+
+.status-message.error {
+    background-color: #f8d7da;
+    border-left: 5px solid #f44336;
+    color: #721c24;
+    white-space: pre-line;
+}
+
+.status-message.warning {
+    background-color: #fff3cd;
+    border-left: 5px solid #ffc107;
+    color: #856404;
+}
+
+.status-message.info {
+    background-color: #d1ecf1;
+    border-left: 5px solid #17a2b8;
+    color: #0c5460;
+}
+
+/* Animações */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Media Queries */
+@media (max-width: 992px) {
+    .container {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .header-left {
+        margin-bottom: 15px;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .header-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .login-area {
+        flex-direction: column;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .login-button, .back-button {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 576px) {
+    .header-left {
+        flex-direction: column;
+    }
+    
+    .municipality-logo {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .title-container {
+        text-align: center;
+    }
+}
