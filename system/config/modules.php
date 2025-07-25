@@ -102,7 +102,7 @@ return [
         'info' => [
             'name' => 'Agricultura',
             'description' => 'Gestão de projetos e programas agrícolas',
-            'icon' => 'fas fa-leaf',
+            'icon' => 'fa-solid fa-tractor',
             'category' => 'department',
             'order' => 10
         ],
@@ -132,7 +132,7 @@ return [
         'info' => [
             'name' => 'Assistência Social',
             'description' => 'Programas sociais e habitacionais',
-            'icon' => 'fas fa-hands-helping',
+            'icon' => 'fas fa-hand-holding-heart',
             'category' => 'department',
             'order' => 11
         ],

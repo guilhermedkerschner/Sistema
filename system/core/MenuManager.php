@@ -132,9 +132,9 @@ class MenuManager {
      */
     private function getDefaultDepartments() {
         return [
-            'ADMINISTRACAO' => ['name' => 'Administração', 'color' => '#dc3545'],
-            'ESPORTE' => ['name' => 'Esporte', 'color' => '#4caf50'],
-            'ASSISTENCIA_SOCIAL' => ['name' => 'Assistência Social', 'color' => '#28a745']
+            'ADMINISTRACAO' => ['name' => 'Administração'],
+            'ESPORTE' => ['name' => 'Esporte'],
+            'ASSISTENCIA_SOCIAL' => ['name' => 'Assistência Social']
         ];
     }
 
