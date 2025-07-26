@@ -1,0 +1,176 @@
+/**
+ * Menu/Sidebar CSS
+ * Sistema da Prefeitura
+ */
+
+/* Sidebar styles */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: var(--header-height);
+    z-index: 100;
+    transition: all 0.3s;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed .menu-text,
+.sidebar.collapsed .sidebar-header h3 {
+    display: none;
+}
+
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-secondary);
+}
+
+.sidebar-header h3 {
+    font-size: 1.1rem;
+    color: var(--text-color);
+    line-height: 1.2;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.toggle-btn:hover {
+    background-color: var(--bg-tertiary);
+}
+
+/* Menu Styles */
+.menu {
+    list-style: none;
+    padding: 1rem 0;
+}
+
+.menu-item {
+    margin: 0.25rem 1rem;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: var(--radius);
+    transition: var(--transition);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.menu-link:hover,
+.menu-link.active {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.menu-link-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.menu-icon {
+    margin-right: 0.75rem;
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
+
+.menu-text {
+    font-weight: 500;
+}
+
+.arrow {
+    margin-left: auto;
+    transition: var(--transition);
+    font-size: 0.75rem;
+}
+
+.menu-item.open .arrow {
+    transform: rotate(90deg);
+}
+
+.submenu {
+    list-style: none;
+    background: var(--bg-tertiary);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    margin-top: 0.25rem;
+    border-radius: var(--radius);
+}
+
+.menu-item.open .submenu {
+    max-height: 500px;
+}
+
+.submenu-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition);
+    font-size: 0.8125rem;
+}
+
+.submenu-link:hover,
+.submenu-link.active {
+    color: var(--secondary-color);
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.menu-category {
+    padding: 1rem 1rem 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+}
+
+.menu-separator {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 10px 0;
+}

@@ -112,15 +112,27 @@ return [
         'menu' => [
             'parent' => true,
             'submenu' => [
-                'projetos' => [
-                    'name' => 'Projetos',
-                    'files' => ['main' => 'agricultura_projetos.php']
+                'paginainicial' => [
+                    'name' => 'Pagina Inicial',
+                    'files' => ['main' => 'agricultura.php']
                 ],
-                'programas' => [
-                    'name' => 'Programas',
-                    'files' => ['main' => 'agricultura_programas.php']
-                ]
-            ]
+                'cadastros' => [
+                    'name' => 'Cadastros',
+                    'files' => ['main' => 'agricultura_cadastros.php']
+                ],
+                'requerimentos' => [
+                    'name' => 'Requerimentos',
+                    'files' => ['main' => 'agricultura_requerimentos.php']
+                ],
+                'promaq' => [
+                    'name' => 'Promaq',
+                    'files' => ['main' => 'agricultura_promaq.php']
+                ],
+                'relatorios' => [
+                    'name' => 'Relatórios',
+                    'files' => ['main' => 'agricultura_relatorios.php']
+                ],
+            ],
         ],
         'permissions' => [
             'levels' => [1, 2, 3, 4],

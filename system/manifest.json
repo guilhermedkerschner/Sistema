@@ -1,0 +1,117 @@
+{
+    "name": "Sistema Municipal - Prefeitura",
+    "short_name": "SGM Prefeitura",
+    "description": "Sistema de Gerenciamento Municipal da Prefeitura",
+    "start_url": "./dashboard.php",
+    "display": "standalone",
+    "background_color": "#2c3e50",
+    "theme_color": "#3498db",
+    "orientation": "portrait-primary",
+    "scope": "./",
+    "lang": "pt-BR",
+    "icons": [
+        {
+            "src": "assets/icons/icon-72x72.png",
+            "sizes": "72x72",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "assets/icons/icon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "assets/icons/icon-128x128.png",
+            "sizes": "128x128",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "assets/icons/icon-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "assets/icons/icon-152x152.png",
+            "sizes": "152x152",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "assets/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "assets/icons/icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "assets/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable any"
+        }
+    ],
+    "categories": ["government", "utilities", "productivity"],
+    "screenshots": [
+        {
+            "src": "assets/screenshots/desktop-dashboard.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "Dashboard Principal"
+        },
+        {
+            "src": "assets/screenshots/mobile-dashboard.png",
+            "sizes": "360x640",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Dashboard Mobile"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "short_name": "Dashboard",
+            "description": "Ir para o dashboard principal",
+            "url": "./dashboard.php",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-96x96.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Usuários",
+            "short_name": "Usuários",
+            "description": "Gerenciar usuários do sistema",
+            "url": "./lista_usuarios.php",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-96x96.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Assistência Social",
+            "short_name": "Assistência",
+            "description": "Sistema de assistência habitacional",
+            "url": "./assistencia_habitacao.php",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-96x96.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ]
+}

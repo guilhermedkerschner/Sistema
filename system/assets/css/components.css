@@ -1,0 +1,126 @@
+/**
+ * Components CSS
+ * Sistema da Prefeitura
+ */
+
+/* Main content styles */
+.main-content {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    margin-top: var(--header-height);
+    padding: 2rem;
+    background: var(--bg-primary);
+    min-height: calc(100vh - var(--header-height));
+    transition: margin-left 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.main-content.expanded {
+    margin-left: 70px;
+}
+
+/* Página em Desenvolvimento */
+.desenvolvimento-container {
+    text-align: center;
+    max-width: 600px;
+    width: 100%;
+    padding: 2rem;
+}
+
+.desenvolvimento-icon {
+    font-size: 4rem;
+    color: var(--secondary-color);
+    margin-bottom: 2rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+.desenvolvimento-title {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.desenvolvimento-subtitle {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    line-height: 1.4;
+}
+
+.desenvolvimento-message {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+}
+
+.desenvolvimento-message h3 {
+    color: var(--secondary-color);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.desenvolvimento-message p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--secondary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius);
+    font-weight: 500;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+}
+
+.back-button:hover {
+    background: #2980b9;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Progress Bar */
+.progress-container {
+    margin: 2rem 0;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--secondary-color), #2980b9);
+    border-radius: 4px;
+    width: 25%;
+    animation: progress 2s ease-in-out;
+}

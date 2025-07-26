@@ -10,18 +10,18 @@ return [
     // =====================================
     'colors' => [
         // Cores principais do sistema
-        'primary' => '#2c3e50',      // Azul escuro - sidebar e elementos principais
-        'secondary' => '#3498db',     // Azul médio - botões secundários
+        'primary' => '#4169E1',      // Azul escuro - sidebar e elementos principais
+        'secondary' => '#4169E1',     // Azul médio - botões secundários
         'success' => '#27ae60',       // Verde - sucessos e aprovações
         'danger' => '#e74c3c',        // Vermelho - erros e exclusões
         'warning' => '#f39c12',       // Laranja - avisos e pendências
         'info' => '#17a2b8',          // Azul claro - informações
         'light' => '#ecf0f1',         // Cinza claro - backgrounds
-        'dark' => '#2c3e50',          // Escuro - textos principais
+        'dark' => '#333',          // Escuro - textos principais
         
         // Cores administrativas
-        'admin' => '#e74c3c',         // Vermelho - administração
-        'system' => '#6c757d',        // Cinza - sistema
+        'admin' => '#4169E1',         // Vermelho - administração
+        'system' => '#4169E1',        // Cinza - sistema
         
         // Cores departamentais (paleta harmoniosa)
         'department_1' => '#3498db',  // Azul

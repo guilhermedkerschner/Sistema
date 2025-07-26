@@ -1,0 +1,69 @@
+/**
+ * Responsive CSS
+ * Sistema da Prefeitura
+ */
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .header-search {
+        max-width: 400px;
+        margin: 0 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        z-index: 300;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+    
+    .mobile-toggle {
+        display: flex;
+    }
+
+    .header {
+        padding: 0 1rem;
+    }
+
+    .header-logo {
+        min-width: auto;
+    }
+
+    .system-title {
+        display: none;
+    }
+
+    .header-search {
+        margin: 0 0.5rem;
+        max-width: none;
+    }
+
+    .user-info {
+        display: none;
+    }
+
+    .desenvolvimento-icon {
+        font-size: 2.5rem;
+    }
+
+    .desenvolvimento-title {
+        font-size: 2rem;
+    }
+
+    .desenvolvimento-subtitle {
+        font-size: 1rem;
+    }
+
+    .desenvolvimento-message {
+        padding: 1.5rem;
+    }
+}
