@@ -1,5 +1,4 @@
 <?php
-// Inicia a sessão
 session_start();
 
 if (!isset($_SESSION['usersystem_logado'])) {
@@ -7,55 +6,77 @@ if (!isset($_SESSION['usersystem_logado'])) {
     exit;
 }
 
-// Incluir arquivo de configuração com conexão ao banco de dados
 require_once "../lib/config.php";
+require_once "./core/MenuManager.php";
 
-// Buscar informações do usuário logado
+// Configuração do usuário
 $usuario_id = $_SESSION['usersystem_id'];
-$usuario_nome = $_SESSION['usersystem_nome'] ?? 'Usuário';
-$usuario_departamento = null;
-$usuario_nivel_id = null;
-$is_admin = false;
+$usuario_dados = [];
 
 try {
-    $stmt = $conn->prepare("SELECT usuario_nome, usuario_departamento, usuario_nivel_id FROM tb_usuarios_sistema WHERE usuario_id = :id");
+    $stmt = $conn->prepare("
+        SELECT usuario_id, usuario_nome, usuario_departamento, usuario_nivel_id,
+               usuario_email, usuario_telefone, usuario_status, usuario_data_criacao,
+               usuario_ultimo_acesso
+        FROM tb_usuarios_sistema WHERE usuario_id = :id
+    ");
     $stmt->bindParam(':id', $usuario_id);
     $stmt->execute();
     
     if ($stmt->rowCount() > 0) {
-        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-        $usuario_nome = $usuario['usuario_nome'];
-        $usuario_departamento = strtoupper($usuario['usuario_departamento']);
-        $usuario_nivel_id = $usuario['usuario_nivel_id'];
+        $usuario_dados = $stmt->fetch(PDO::FETCH_ASSOC);
+        $_SESSION['usersystem_nome'] = $usuario_dados['usuario_nome'];
+        $_SESSION['usersystem_departamento'] = $usuario_dados['usuario_departamento'];
+        $_SESSION['usersystem_nivel'] = $usuario_dados['usuario_nivel_id'];
         
-        // Verificar se é administrador
-        $is_admin = ($usuario_nivel_id == 1);
+        $stmt_update = $conn->prepare("UPDATE tb_usuarios_sistema SET usuario_ultimo_acesso = NOW() WHERE usuario_id = :id");
+        $stmt_update->bindParam(':id', $usuario_id);
+        $stmt_update->execute();
+    } else {
+        session_destroy();
+        header("Location: ../acessdeniedrestrict.php");
+        exit;
     }
 } catch (PDOException $e) {
     error_log("Erro ao buscar dados do usuário: " . $e->getMessage());
 }
 
-// Verificar se o usuário tem permissão para acessar esta página
+// Verificar se é administrador
+$is_admin = ($usuario_dados['usuario_nivel_id'] == 1);
 if (!$is_admin) {
     header("Location: dashboard.php");
     exit;
 }
 
+// Inicializar MenuManager
+$userSession = [
+    'usuario_id' => $usuario_dados['usuario_id'],
+    'usuario_nome' => $usuario_dados['usuario_nome'],
+    'usuario_departamento' => $usuario_dados['usuario_departamento'],
+    'usuario_nivel_id' => $usuario_dados['usuario_nivel_id'],
+    'usuario_email' => $usuario_dados['usuario_email']
+];
+
+$menuManager = new MenuManager($userSession);
+$themeColors = $menuManager->getThemeColors();
+$availableModules = $menuManager->getAvailableModules();
+
 // Parâmetros de paginação e filtros
 $pagina_atual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
-$registros_por_pagina = 10;
+$registros_por_pagina = 15;
 $offset = ($pagina_atual - 1) * $registros_por_pagina;
 
 $filtro_nome = isset($_GET['nome']) ? trim($_GET['nome']) : '';
 $filtro_departamento = isset($_GET['departamento']) ? trim($_GET['departamento']) : '';
 $filtro_status = isset($_GET['status']) ? trim($_GET['status']) : '';
+$filtro_nivel = isset($_GET['nivel']) ? trim($_GET['nivel']) : '';
 
 // Construir query de busca
 $where_conditions = [];
 $params = [];
 
 if (!empty($filtro_nome)) {
-    $where_conditions[] = "usuario_nome LIKE :nome";
+    $where_conditions[] = "(usuario_nome LIKE :nome OR usuario_login LIKE :nome OR usuario_email LIKE :nome)";
     $params[':nome'] = "%{$filtro_nome}%";
 }
 
@@ -67,6 +88,11 @@ if (!empty($filtro_departamento)) {
 if (!empty($filtro_status)) {
     $where_conditions[] = "usuario_status = :status";
     $params[':status'] = $filtro_status;
+}
+
+if (!empty($filtro_nivel)) {
+    $where_conditions[] = "usuario_nivel_id = :nivel";
+    $params[':nivel'] = $filtro_nivel;
 }
 
 $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
@@ -120,23 +146,10 @@ try {
     error_log("Erro ao buscar departamentos: " . $e->getMessage());
 }
 
-// Definir menus baseados no departamento (mesmo array do dashboard)
-$menus_departamentos = [
-    'AGRICULTURA' => ['icon' => 'fas fa-leaf', 'name' => 'Agricultura', 'color' => '#2e7d32'],
-    'ASSISTENCIA SOCIAL' => ['icon' => 'fas fa-hands-helping', 'name' => 'Assistência Social', 'color' => '#e91e63'],
-    'CULTURA E TURISMO' => ['icon' => 'fas fa-palette', 'name' => 'Cultura e Turismo', 'color' => '#ff5722'],
-    'EDUCACAO' => ['icon' => 'fas fa-graduation-cap', 'name' => 'Educação', 'color' => '#9c27b0'],
-    'ESPORTE' => ['icon' => 'fas fa-running', 'name' => 'Esporte', 'color' => '#4caf50'],
-    'FAZENDA' => ['icon' => 'fas fa-money-bill-wave', 'name' => 'Fazenda', 'color' => '#ff9800'],
-    'FISCALIZACAO' => ['icon' => 'fas fa-search', 'name' => 'Fiscalização', 'color' => '#673ab7'],
-    'MEIO AMBIENTE' => ['icon' => 'fas fa-tree', 'name' => 'Meio Ambiente', 'color' => '#009688'],
-    'OBRAS' => ['icon' => 'fas fa-hard-hat', 'name' => 'Obras', 'color' => '#795548'],
-    'RODOVIARIO' => ['icon' => 'fas fa-truck', 'name' => 'Rodoviário', 'color' => '#607d8b'],
-    'SERVICOS URBANOS' => ['icon' => 'fas fa-city', 'name' => 'Serviços Urbanos', 'color' => '#2196f3']
-];
-
-$titulo_sistema = 'Administração Geral';
-$cor_tema = '#e74c3c';
+// Mensagens de feedback
+$mensagem_sucesso = $_SESSION['sucesso_usuario'] ?? '';
+$mensagem_erro = $_SESSION['erro_usuario'] ?? '';
+unset($_SESSION['sucesso_usuario'], $_SESSION['erro_usuario']);
 ?>
 
 <!DOCTYPE html>
@@ -144,1001 +157,959 @@ $cor_tema = '#e74c3c';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista de Usuários - Sistema da Prefeitura</title>
     <link rel="icon" href="../../img/logo_eai.ico" type="imagem/x-icon">
+    <title>Lista de Usuários - Sistema da Prefeitura</title>
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="assets/css/base.css">
+    <link rel="stylesheet" href="assets/css/header.css">
+    <link rel="stylesheet" href="assets/css/menu.css">
+    <link rel="stylesheet" href="assets/css/components.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+    
     <style>
-        * {
+        /* Layout principal */
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
         }
 
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: <?php echo $cor_tema; ?>;
-            --text-color: #333;
-            --light-color: #ecf0f1;
-            --sidebar-width: 250px;
-            --header-height: 60px;
-        }
-
-        body {
-            display: flex;
-            min-height: 100vh;
-            background-color: #f5f7fa;
-        }
-
-        /* Sidebar styles - mesmos do dashboard */
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--primary-color);
-            color: white;
-            position: fixed;
-            height: 100%;
-            left: 0;
-            top: 0;
-            z-index: 100;
-            transition: all 0.3s;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            height: var(--header-height);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            background-color: var(--primary-color);
-        }
-
-        .sidebar-header h3 {
-            font-size: 1.1rem;
-            color: white;
-            line-height: 1.2;
-        }
-
-        .sidebar.collapsed {
-            width: 70px;
-        }
-
-        .sidebar.collapsed .menu-text,
-        .sidebar.collapsed .sidebar-header h3 {
-            display: none;
-        }
-
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        .menu {
-            list-style: none;
-            padding: 10px 0;
-        }
-
-        .menu-item {
-            position: relative;
-        }
-
-        .menu-link {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .menu-link:hover, 
-        .menu-link.active {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--secondary-color);
-        }
-
-        .menu-icon {
-            margin-right: 10px;
-            font-size: 18px;
-            width: 25px;
-            text-align: center;
-        }
-
-        .arrow {
-            margin-left: auto;
-            transition: transform 0.3s;
-        }
-
-        .menu-item.open .arrow {
-            transform: rotate(90deg);
-        }
-
-        .submenu {
-            list-style: none;
-            background-color: rgba(0, 0, 0, 0.1);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .menu-item.open .submenu {
-            max-height: 1000px;
-        }
-
-        .submenu-link {
-            display: block;
-            padding: 10px 10px 10px 55px;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .submenu-link:hover,
-        .submenu-link.active {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--secondary-color);
-        }
-
-        .menu-separator {
-            height: 1px;
-            background-color: rgba(255, 255, 255, 0.1);
-            margin: 10px 0;
-        }
-
-        .menu-category {
-            padding: 10px 20px 5px;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.8rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Main content styles */
         .main-content {
-            flex: 1;
-            margin-left: var(--sidebar-width);
-            padding: 20px;
-            transition: margin-left 0.3s;
+            margin-left: var(--sidebar-width, 280px);
+            margin-top: var(--header-height, 70px);
+            min-height: calc(100vh - var(--header-height, 70px));
+            transition: margin-left 0.3s ease;
         }
 
-        .main-content.expanded {
+        .main-content.sidebar-collapsed {
             margin-left: 70px;
         }
 
-        .header {
-            height: var(--header-height);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            background-color: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            border-radius: 8px;
+        .usuarios-container {
+            padding: 30px;
+            width: 100%;
+            max-width: none;
+            box-sizing: border-box;
         }
 
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-details {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 3px;
-        }
-
-        .user-name {
-            font-weight: bold;
-            color: var(--text-color);
-            white-space: nowrap;
-        }
-
-        .user-role {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
-
-        .admin-badge {
-            background-color: #e74c3c;
+        /* Header da página */
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 4px 8px;
+            padding: 30px;
             border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            white-space: nowrap;
-        }
-
-        .admin-badge i {
-            font-size: 0.7rem;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
         }
 
         .page-title {
-            margin-bottom: 20px;
-            font-size: 1.5rem;
-            color: var(--text-color);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
+            gap: 15px;
         }
 
-        .page-title i {
-            margin-right: 10px;
-            color: var(--secondary-color);
-        }
-
-        /* Filtros */
-        .filters-container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        .filters-title {
+        .page-subtitle {
             font-size: 1.1rem;
-            margin-bottom: 15px;
-            color: var(--text-color);
-            display: flex;
-            align-items: center;
+            opacity: 0.9;
+            font-weight: 400;
         }
 
-        .filters-title i {
-            margin-right: 8px;
-            color: var(--secondary-color);
-        }
-
-        .filters-row {
+        /* Estatísticas */
+        .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .filter-group {
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 1.5rem;
+            color: white;
         }
 
-        .filter-group label {
-            font-weight: 500;
+        .stat-icon.total { background: #3498db; }
+        .stat-icon.ativos { background: #27ae60; }
+        .stat-icon.inativos { background: #e74c3c; }
+        .stat-icon.admins { background: #9b59b6; }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
             margin-bottom: 5px;
-            color: var(--text-color);
         }
 
-        .filter-group input,
-        .filter-group select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
+        .stat-label {
+            color: #7f8c8d;
+            font-weight: 500;
         }
 
-        .filter-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 8px 16px;
+        /* Botão adicionar */
+        .btn-adicionar {
+            background: #27ae60;
+            color: white;
             border: none;
-            border-radius: 4px;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
         }
 
-        .btn i {
-            margin-right: 5px;
+        .btn-adicionar:hover {
+            background: #219a52;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
         }
 
-        .btn-primary {
-            background-color: var(--secondary-color);
-            color: white;
+        /* Seção de filtros */
+        .filtros-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        .btn-primary:hover {
-            background-color: #c0392b;
+        .filtros-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
         }
 
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
+        .filtros-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .btn-secondary:hover {
-            background-color: #545b62;
+        .filtros-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
         }
 
-        .btn-success {
-            background-color: #28a745;
-            color: white;
+        .filtro-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .btn-success:hover {
-            background-color: #1e7e34;
+        .filtro-group label {
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
         }
 
-        /* Tabela */
-        .table-container {
-            background-color: white;
+        .filtro-input,
+        .filtro-select {
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .filtro-input:focus,
+        .filtro-select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-filtrar,
+        .btn-limpar {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .btn-filtrar {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-filtrar:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-limpar {
+            background: #6b7280;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .btn-limpar:hover {
+            background: #4b5563;
+        }
+
+        /* Lista de usuários */
+        .lista-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             overflow: hidden;
         }
 
-        .table-header {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
+        .lista-header {
+            background: #f8fafc;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e5e7eb;
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
         }
 
-        .table-title {
-            font-size: 1.1rem;
-            color: var(--text-color);
+        .lista-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #374151;
             display: flex;
             align-items: center;
+            gap: 10px;
         }
 
-        .table-title i {
-            margin-right: 8px;
-            color: var(--secondary-color);
+        .contador-resultados {
+            background: #667eea;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        .table-info {
-            color: #666;
-            font-size: 0.9rem;
+        .table-responsive {
+            overflow-x: auto;
         }
 
-        .table {
+        table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .table th,
-        .table td {
-            padding: 12px;
+        th {
+            background: #f8fafc;
+            padding: 15px 20px;
             text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        .table th {
-            background-color: #f8f9fa;
             font-weight: 600;
-            color: var(--text-color);
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            white-space: nowrap;
         }
 
-        .table tbody tr:hover {
-            background-color: #f8f9fa;
+        td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: middle;
         }
 
-        /* Status badges */
+        tr:hover {
+            background: #f8fafc;
+        }
+
         .status-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .status-ativo {
-            background-color: #d4edda;
-            color: #155724;
+            background: #d1fae5;
+            color: #065f46;
         }
 
         .status-inativo {
-            background-color: #f8d7da;
-            color: #721c24;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-bloqueado {
+            background: #fef3c7;
+            color: #92400e;
         }
 
         .nivel-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .nivel-admin {
-            background-color: #f8d7da;
-            color: #721c24;
+            background: #fee2e2;
+            color: #991b1b;
         }
 
         .nivel-user {
-            background-color: #d1ecf1;
-            color: #0c5460;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .acoes {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-acao {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+        }
+
+        .btn-editar {
+            background: #fbbf24;
+            color: white;
+        }
+
+        .btn-excluir {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-acao:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         /* Paginação */
         .pagination-container {
-            padding: 20px;
-            border-top: 1px solid #eee;
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
         }
 
         .pagination-info {
-            color: #666;
-            font-size: 0.9rem;
+            color: #6b7280;
+            font-size: 14px;
         }
 
         .pagination {
             display: flex;
             gap: 5px;
-            margin-left: auto;
         }
 
         .pagination a,
         .pagination span {
             padding: 8px 12px;
-            border: 1px solid #ddd;
+            border: 1px solid #d1d5db;
             text-decoration: none;
-            color: var(--text-color);
-            border-radius: 4px;
+            color: #374151;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
         }
 
         .pagination a:hover {
-            background-color: #f8f9fa;
+            background: #f3f4f6;
+            border-color: #9ca3af;
         }
 
         .pagination .active {
-            background-color: var(--secondary-color);
+            background: #667eea;
             color: white;
-            border-color: var(--secondary-color);
+            border-color: #667eea;
         }
 
-        /* Actions */
-        .actions {
+        .sem-registros {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .sem-registros i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Alertas */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             display: flex;
-            gap: 5px;
-        }
-
-        .btn-action {
-            padding: 4px 8px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            text-decoration: none;
-            display: inline-flex;
             align-items: center;
+            gap: 10px;
         }
 
-        .btn-edit {
-            background-color: #007bff;
-            color: white;
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
         }
 
-        .btn-edit:hover {
-            background-color: #0056b3;
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
         }
 
-        .btn-delete {
-            background-color: #dc3545;
-            color: white;
+        /* Responsividade */
+        @media (max-width: 1200px) {
+            .filtros-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
         }
 
-        .btn-delete:hover {
-            background-color: #c82333;
-        }
-
-        /* Responsivo */
         @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
             .main-content {
                 margin-left: 0;
             }
             
-            .mobile-toggle {
-                display: block;
-                background: none;
-                border: none;
-                font-size: 20px;
-                cursor: pointer;
-                color: var(--primary-color);
+            .usuarios-container {
+                padding: 20px;
+            }
+            
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .page-title {
+                font-size: 1.8rem;
             }
 
-            .filters-row {
-                grid-template-columns: 1fr;
-            }
-
-            .table-container {
-                overflow-x: auto;
-            }
-
-            .filter-actions {
+            .acoes {
                 flex-direction: column;
             }
 
-            .header {
-                flex-direction: column;
-                gap: 10px;
-                padding: 15px 20px;
-                height: auto;
-            }
-
-            .header > div:first-child {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
+            .btn-acao {
                 width: 100%;
+                justify-content: center;
             }
 
-            .user-details {
-                align-items: flex-start;
+            .pagination-container {
+                flex-direction: column;
+                gap: 15px;
             }
-
-            .user-name {
-                font-size: 0.9rem;
-            }
-
-            .admin-badge {
-                font-size: 0.7rem;
-                padding: 3px 6px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .header h2 {
-                font-size: 1.2rem;
-            }
-
-            .user-info {
-                gap: 8px;
-            }
-
-            .user-details {
-                min-width: 0;
-            }
-
-            .user-name {
-                font-size: 0.85rem;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-        }
-
-        .mobile-toggle {
-            display: none;
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h3><?php echo $titulo_sistema; ?></h3>
-            <button class="toggle-btn">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-        
-        <ul class="menu">
-            <li class="menu-item">
-                <a href="dashboard.php" class="menu-link">
-                    <span class="menu-icon"><i class="fas fa-tachometer-alt"></i></span>
-                    <span class="menu-text">Dashboard</span>
-                </a>
-            </li>
-            
-            <div class="menu-separator"></div>
-            <div class="menu-category">Administração</div>
-            
-            <li class="menu-item open">
-                <a href="#" class="menu-link">
-                    <span class="menu-icon"><i class="fas fa-users-cog"></i></span>
-                    <span class="menu-text">Gerenciar Usuários</span>
-                    <span class="arrow"><i class="fas fa-chevron-right"></i></span>
-                </a>
-                <ul class="submenu">
-                    <li><a href="lista_usuarios.php" class="submenu-link active">Lista de Usuários</a></li>
-                    <li><a href="adicionar_usuario.php" class="submenu-link">Adicionar Usuário</a></li>
-                    <li><a href="permissoes.php" class="submenu-link">Permissões</a></li>
-                </ul>
-            </li>
-            
-            <li class="menu-item">
-                <a href="#" class="menu-link">
-                    <span class="menu-icon"><i class="fas fa-chart-pie"></i></span>
-                    <span class="menu-text">Relatórios Gerais</span>
-                    <span class="arrow"><i class="fas fa-chevron-right"></i></span>
-                </a>
-                <ul class="submenu">
-                    <li><a href="#" class="submenu-link">Consolidado Geral</a></li>
-                    <li><a href="#" class="submenu-link">Por Departamento</a></li>
-                    <li><a href="#" class="submenu-link">Estatísticas</a></li>
-                </ul>
-            </li>
-            
-            <div class="menu-separator"></div>
-            <div class="menu-category">Departamentos</div>
-            
-            <?php foreach ($menus_departamentos as $dept => $config): ?>
-            <li class="menu-item">
-                <a href="#" class="menu-link">
-                    <span class="menu-icon"><i class="<?php echo $config['icon']; ?>"></i></span>
-                    <span class="menu-text"><?php echo $config['name']; ?></span>
-                    <span class="arrow"><i class="fas fa-chevron-right"></i></span>
-                </a>
-                <ul class="submenu">
-                    <li><a href="#" class="submenu-link">Relatórios</a></li>
-                    <li><a href="#" class="submenu-link">Configurações</a></li>
-                </ul>
-            </li>
-            <?php endforeach; ?>
-            
-            <div class="menu-separator"></div>
-            
-            <li class="menu-item">
-                <a href="#" class="menu-link">
-                    <span class="menu-icon"><i class="fas fa-user-cog"></i></span>
-                    <span class="menu-text">Meu Perfil</span>
-                </a>
-            </li>
-            
-            <li class="menu-item">
-                <a href="../controller/logout_system.php" class="menu-link">
-                    <span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>
-                    <span class="menu-text">Sair</span>
-                </a>
-            </li>
-        </ul>
-    </div>
+    <?php include 'includes/header.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div class="main-content">
-        <div class="header">
-            <div>
-                <button class="mobile-toggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h2>Lista de Usuários</h2>
+    <div class="main-content" id="mainContent">
+        <div class="usuarios-container">
+            <!-- Header -->
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-users-cog"></i>
+                    Gerenciamento de Usuários
+                </h1>
+                <p class="page-subtitle">
+                    Gerencie todos os usuários do sistema de forma centralizada
+                </p>
             </div>
-            <div class="user-info">
-                <div style="width: 35px; height: 35px; border-radius: 50%; background-color: var(--secondary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                    <?php echo strtoupper(substr($usuario_nome, 0, 1)); ?>
-                </div>
-                <div class="user-details">
-                    <div class="user-name"><?php echo htmlspecialchars($usuario_nome); ?></div>
-                    <div class="user-role">
-                        <span class="admin-badge">
-                            <i class="fas fa-crown"></i> Administrador
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <h1 class="page-title">
-            <i class="fas fa-users"></i>
-            Gerenciamento de Usuários
-        </h1>
 
-        <!-- Filtros -->
-        <div class="filters-container">
-            <div class="filters-title">
-                <i class="fas fa-filter"></i>
-                Filtros de Busca
-            </div>
-            
-            <form method="GET" action="">
-                <div class="filters-row">
-                    <div class="filter-group">
-                        <label for="nome">Nome do Usuário</label>
-                        <input type="text" id="nome" name="nome" value="<?php echo htmlspecialchars($filtro_nome); ?>" placeholder="Digite o nome...">
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="departamento">Departamento</label>
-                        <select id="departamento" name="departamento">
-                            <option value="">Todos os Departamentos</option>
-                            <?php foreach ($departamentos as $dept): ?>
-                            <option value="<?php echo htmlspecialchars($dept); ?>" <?php echo $filtro_departamento === $dept ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($dept); ?>
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="status">Status</label>
-                        <select id="status" name="status">
-                            <option value="">Todos os Status</option>
-                            <option value="ativo" <?php echo $filtro_status === 'ativo' ? 'selected' : ''; ?>>Ativo</option>
-                            <option value="inativo" <?php echo $filtro_status === 'inativo' ? 'selected' : ''; ?>>Inativo</option>
-                        </select>
-                    </div>
+            <!-- Alertas -->
+            <?php if (!empty($mensagem_sucesso)): ?>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <?= htmlspecialchars($mensagem_sucesso) ?>
                 </div>
-                
-                <div class="filter-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i> Filtrar
-                    </button>
-                    <a href="lista_usuarios.php" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Limpar
-                    </a>
-                    <a href="adicionar_usuario.php" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Novo Usuário
-                    </a>
-                </div>
-            </form>
-        </div>
-
-        <!-- Tabela de Usuários -->
-        <div class="table-container">
-            <div class="table-header">
-                <div class="table-title">
-                    <i class="fas fa-list"></i>
-                    Lista de Usuários
-                </div>
-                <div class="table-info">
-                    <?php echo $total_registros; ?> usuário(s) encontrado(s)
-                </div>
-            </div>
-            
-            <?php if (count($usuarios) > 0): ?>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Login</th>
-                        <th>E-mail</th>
-                        <th>Departamento</th>
-                        <th>Nível</th>
-                        <th>Status</th>
-                        <th>Cadastro</th>
-                        <th>Último Acesso</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($usuarios as $usuario): ?>
-                    <tr>
-                        <td><?php echo $usuario['usuario_id']; ?></td>
-                        <td><?php echo htmlspecialchars($usuario['usuario_nome']); ?></td>
-                        <td><?php echo htmlspecialchars($usuario['usuario_login']); ?></td>
-                        <td><?php echo htmlspecialchars($usuario['usuario_email']); ?></td>
-                        <td><?php echo htmlspecialchars($usuario['usuario_departamento'] ?? 'Não definido'); ?></td>
-                        <td>
-                            <span class="nivel-badge <?php echo $usuario['usuario_nivel_id'] == 1 ? 'nivel-admin' : 'nivel-user'; ?>">
-                                <?php echo $usuario['usuario_nivel_id'] == 1 ? 'Admin' : 'Usuário'; ?>
-                            </span>
-                        </td>
-                        <td>
-                            <span class="status-badge status-<?php echo $usuario['usuario_status']; ?>">
-                                <?php echo ucfirst($usuario['usuario_status']); ?>
-                            </span>
-                        </td>
-                        <td><?php echo date('d/m/Y', strtotime($usuario['usuario_data_criacao'])); ?></td>
-                        <td>
-                            <?php 
-                            if ($usuario['usuario_ultimo_acesso']) {
-                                echo date('d/m/Y H:i', strtotime($usuario['usuario_ultimo_acesso']));
-                            } else {
-                                echo '<span style="color: #999;">Nunca</span>';
-                            }
-                            ?>
-                        </td>
-                        <td>
-                            <div class="actions">
-                                <a href="editar_usuario.php?id=<?php echo $usuario['usuario_id']; ?>" class="btn-action btn-edit" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <?php if ($usuario['usuario_id'] != $usuario_id): // Não pode excluir a si mesmo ?>
-                                <button type="button" class="btn-action btn-delete" title="Excluir" onclick="confirmarExclusao(<?php echo $usuario['usuario_id']; ?>, '<?php echo htmlspecialchars($usuario['usuario_nome']); ?>')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            
-            <!-- Paginação -->
-            <?php if ($total_paginas > 1): ?>
-            <div class="pagination-container">
-                <div class="pagination-info">
-                    Mostrando <?php echo (($pagina_atual - 1) * $registros_por_pagina) + 1; ?> a 
-                    <?php echo min($pagina_atual * $registros_por_pagina, $total_registros); ?> de 
-                    <?php echo $total_registros; ?> registros
-                </div>
-                
-                <div class="pagination">
-                    <?php if ($pagina_atual > 1): ?>
-                    <a href="?pagina=<?php echo $pagina_atual - 1; ?>&nome=<?php echo urlencode($filtro_nome); ?>&departamento=<?php echo urlencode($filtro_departamento); ?>&status=<?php echo urlencode($filtro_status); ?>">
-                        <i class="fas fa-chevron-left"></i> Anterior
-                    </a>
-                    <?php endif; ?>
-                    
-                    <?php
-                    $inicio = max(1, $pagina_atual - 2);
-                    $fim = min($total_paginas, $pagina_atual + 2);
-                    
-                    for ($i = $inicio; $i <= $fim; $i++):
-                    ?>
-                    <?php if ($i == $pagina_atual): ?>
-                    <span class="active"><?php echo $i; ?></span>
-                    <?php else: ?>
-                    <a href="?pagina=<?php echo $i; ?>&nome=<?php echo urlencode($filtro_nome); ?>&departamento=<?php echo urlencode($filtro_departamento); ?>&status=<?php echo urlencode($filtro_status); ?>">
-                        <?php echo $i; ?>
-                    </a>
-                    <?php endif; ?>
-                    <?php endfor; ?>
-                    
-                    <?php if ($pagina_atual < $total_paginas): ?>
-                    <a href="?pagina=<?php echo $pagina_atual + 1; ?>&nome=<?php echo urlencode($filtro_nome); ?>&departamento=<?php echo urlencode($filtro_departamento); ?>&status=<?php echo urlencode($filtro_status); ?>">
-                        Próxima <i class="fas fa-chevron-right"></i>
-                    </a>
-                    <?php endif; ?>
-                </div>
-            </div>
             <?php endif; ?>
+
+            <?php if (!empty($mensagem_erro)): ?>
+                <div class="alert alert-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?= htmlspecialchars($mensagem_erro) ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Estatísticas -->
+            <?php
+            $stats = [
+                'total' => 0,
+                'ativos' => 0,
+                'inativos' => 0,
+                'admins' => 0
+            ];
             
-            <?php else: ?>
-            <div style="padding: 40px; text-align: center; color: #666;">
-                <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; color: #ddd;"></i>
-                <h3>Nenhum usuário encontrado</h3>
-                <p>Não há usuários que correspondam aos filtros aplicados.</p>
-                <div style="margin-top: 20px;">
-                    <a href="lista_usuarios.php" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Limpar Filtros
-                    </a>
-                    <a href="adicionar_usuario.php" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Adicionar Primeiro Usuário
-                    </a>
+            try {
+                $stmt = $conn->prepare("
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN usuario_status = 'ativo' THEN 1 ELSE 0 END) as ativos,
+                        SUM(CASE WHEN usuario_status = 'inativo' THEN 1 ELSE 0 END) as inativos,
+                        SUM(CASE WHEN usuario_nivel_id = 1 THEN 1 ELSE 0 END) as admins
+                    FROM tb_usuarios_sistema
+                ");
+                $stmt->execute();
+                $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                error_log("Erro ao buscar estatísticas: " . $e->getMessage());
+            }
+            ?>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon total">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number"><?= $stats['total'] ?></div>
+                    <div class="stat-label">Total de Usuários</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon ativos">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-number"><?= $stats['ativos'] ?></div>
+                    <div class="stat-label">Usuários Ativos</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon inativos">
+                        <i class="fas fa-user-times"></i>
+                    </div>
+                    <div class="stat-number"><?= $stats['inativos'] ?></div>
+                    <div class="stat-label">Usuários Inativos</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon admins">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="stat-number"><?= $stats['admins'] ?></div>
+                    <div class="stat-label">Administradores</div>
                 </div>
             </div>
-            <?php endif; ?>
-        </div>
-    </div>
 
-    <!-- Modal de Confirmação de Exclusão -->
-    <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background-color: white; padding: 30px; border-radius: 8px; max-width: 400px; width: 90%; text-align: center;">
-            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #dc3545; margin-bottom: 15px;"></i>
-            <h3 style="margin-bottom: 15px; color: #333;">Confirmar Exclusão</h3>
-            <p style="margin-bottom: 20px; color: #666;">Tem certeza que deseja excluir o usuário <strong id="userName"></strong>?</p>
-            <p style="margin-bottom: 25px; color: #dc3545; font-size: 0.9rem;">Esta ação não pode ser desfeita!</p>
-            
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button type="button" onclick="fecharModal()" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button type="button" id="confirmDelete" class="btn" style="background-color: #dc3545; color: white;">
-                    <i class="fas fa-trash"></i> Excluir
-                </button>
-            </div>
-        </div>
-    </div>
+            <!-- Botão Adicionar -->
+            <a href="adicionar_usuario.php" class="btn-adicionar">
+                <i class="fas fa-plus"></i>
+                Adicionar Novo Usuário
+            </a>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Toggle sidebar
-            const toggleBtn = document.querySelector('.toggle-btn');
-            const mobileToggle = document.querySelector('.mobile-toggle');
-            const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.main-content');
-            
-            function toggleSidebar() {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.toggle('show');
-                } else {
-                    sidebar.classList.toggle('collapsed');
-                    mainContent.classList.toggle('expanded');
-                }
-            }
-            
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', toggleSidebar);
-            }
-            
-            if (mobileToggle) {
-                mobileToggle.addEventListener('click', toggleSidebar);
-            }
-            
-            // Toggle submenu
-            const menuItems = document.querySelectorAll('.menu-item');
-            
-            menuItems.forEach(function(item) {
-                const menuLink = item.querySelector('.menu-link');
+            <!-- Filtros de Pesquisa -->
+            <div class="filtros-container">
+                <div class="filtros-header">
+                    <h3 class="filtros-title">
+                        <i class="fas fa-search"></i>
+                        Filtros de Pesquisa
+                    </h3>
+                </div>
                 
-                if (menuLink && menuLink.querySelector('.arrow')) {
-                    menuLink.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        item.classList.toggle('open');
+                <form method="GET" action="" id="formFiltros">
+                    <div class="filtros-grid">
+                        <div class="filtro-group">
+                            <label for="nome">Nome, Login ou E-mail</label>
+                            <input type="text" 
+                                   id="nome" 
+                                   name="nome" 
+                                   class="filtro-input"
+                                   placeholder="Digite para buscar..."
+                                   value="<?= htmlspecialchars($filtro_nome) ?>">
+                        </div>
                         
-                        // Close other open menus
-                        menuItems.forEach(function(otherItem) {
-                            if (otherItem !== item && otherItem.classList.contains('open')) {
-                                otherItem.classList.remove('open');
-                            }
-                        });
-                    });
-                }
-            });
-            
-            // Close sidebar when clicking outside on mobile
-            document.addEventListener('click', function(e) {
-                if (window.innerWidth <= 768) {
-                    const isClickInsideSidebar = sidebar.contains(e.target);
-                    const isToggleBtn = e.target.closest('.mobile-toggle') || e.target.closest('.toggle-btn');
-                    
-                    if (!isClickInsideSidebar && !isToggleBtn && sidebar.classList.contains('show')) {
-                        sidebar.classList.remove('show');
-                    }
-                }
-            });
-            
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 768) {
-                    sidebar.classList.remove('show');
-                }
-            });
-        });
-        
-        // Funções para o modal de exclusão
-        function confirmarExclusao(userId, userName) {
-            document.getElementById('userName').textContent = userName;
-            document.getElementById('deleteModal').style.display = 'flex';
-            
-            document.getElementById('confirmDelete').onclick = function() {
-                excluirUsuario(userId);
-            };
-        }
-        
-        function fecharModal() {
-            document.getElementById('deleteModal').style.display = 'none';
-        }
-        
-        function excluirUsuario(userId) {
-            // Implementar a exclusão via AJAX ou redirect
-            window.location.href = 'excluir_usuario.php?id=' + userId;
-        }
-        
-        // Fechar modal ao clicar fora
-        document.getElementById('deleteModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                fecharModal();
-            }
-        });
-        
-        // Fechar modal com ESC
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                fecharModal();
-            }
-        });
-    </script>
+                        <div class="filtro-group">
+                            <label for="departamento">Departamento</label>
+                            <select id="departamento" name="departamento" class="filtro-select">
+                                <option value="">Todos os departamentos</option>
+                                <?php foreach ($departamentos as $dept): ?>
+                                    <option value="<?= htmlspecialchars($dept) ?>" 
+                                            <?= $filtro_departamento === $dept ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($dept) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="filtro-group">
+                            <label for="status">Status</label>
+                            <select id="status" name="status" class="filtro-select">
+                                <option value="">Todos os status</option>
+                                <option value="ativo" <?= $filtro_status === 'ativo' ? 'selected' : '' ?>>Ativo</option>
+                                <option value="inativo" <?= $filtro_status === 'inativo' ? 'selected' : '' ?>>Inativo</option>
+                                <option value="bloqueado" <?= $filtro_status === 'bloqueado' ? 'selected' : '' ?>>Bloqueado</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filtro-group">
+                            <label for="nivel">Nível</label>
+                            <select id="nivel" name="nivel" class="filtro-select">
+                                <option value="">Todos os níveis</option>
+                                <option value="1" <?= $filtro_nivel === '1' ? 'selected' : '' ?>>Administrador</option>
+                                <option value="2" <?= $filtro_nivel === '2' ? 'selected' : '' ?>>Usuário</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filtro-group">
+                            <button type="submit" class="btn-filtrar">
+                                <i class="fas fa-search"></i>
+                                Filtrar
+                            </button>
+                            <a href="lista_usuarios.php" class="btn-limpar">
+                                <i class="fas fa-eraser"></i>
+                                Limpar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lista de Usuários -->
+            <div class="lista-container">
+                <div class="lista-header">
+                    <h3 class="lista-title">
+                        <i class="fas fa-list"></i>
+                        Usuários Encontrados
+                    </h3>
+                    <div class="contador-resultados">
+                        <?= $total_registros ?> resultado(s)
+                    </div>
+                </div>
+
+                <?php if (count($usuarios) > 0): ?>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Login</th>
+                                    <th>E-mail</th>
+                                    <th>Departamento</th>
+                                    <th>Nível</th>
+                                    <th>Status</th>
+                                    <th>Cadastro</th>
+                                    <th>Último Acesso</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($usuarios as $usuario): ?>
+                                <tr>
+                                    <td><?= $usuario['usuario_id'] ?></td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($usuario['usuario_nome']) ?></strong>
+                                    </td>
+                                    <td><?= htmlspecialchars($usuario['usuario_login']) ?></td>
+                                    <td><?= htmlspecialchars($usuario['usuario_email']) ?></td>
+                                    <td><?= htmlspecialchars($usuario['usuario_departamento'] ?? 'Não definido') ?></td>
+                                    <td>
+                                        <span class="nivel-badge <?= $usuario['usuario_nivel_id'] == 1 ? 'nivel-admin' : 'nivel-user' ?>">
+                                            <?= $usuario['usuario_nivel_id'] == 1 ? 'Admin' : 'Usuário' ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-<?= $usuario['usuario_status'] ?>">
+                                            <?= ucfirst($usuario['usuario_status']) ?>
+                                        </span>
+                                    </td>
+                                    <td><?= date('d/m/Y', strtotime($usuario['usuario_data_criacao'])) ?></td>
+                                    <td>
+                                        <?php if ($usuario['usuario_ultimo_acesso']): ?>
+                                            <?= date('d/m/Y H:i', strtotime($usuario['usuario_ultimo_acesso'])) ?>
+                                        <?php else: ?>
+                                            <span style="color: #999;">Nunca</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="acoes">
+                                        <a href="editar_usuario.php?id=<?= $usuario['usuario_id'] ?>" class="btn-acao btn-editar" title="Editar">
+                                               <i class="fas fa-edit"></i>
+                                               Editar
+                                           </a>
+                                           <?php if ($usuario['usuario_id'] != $usuario_id): // Não pode excluir a si mesmo ?>
+                                           <button class="btn-acao btn-excluir" 
+                                                   onclick="excluirUsuario(<?= $usuario['usuario_id'] ?>, '<?= htmlspecialchars($usuario['usuario_nome']) ?>')"
+                                                   title="Excluir">
+                                               <i class="fas fa-trash"></i>
+                                               Excluir
+                                           </button>
+                                           <?php else: ?>
+                                           <button class="btn-acao" 
+                                                   style="background: #94a3b8; cursor: not-allowed;"
+                                                   title="Não é possível excluir a si mesmo"
+                                                   disabled>
+                                               <i class="fas fa-lock"></i>
+                                               Protegido
+                                           </button>
+                                           <?php endif; ?>
+                                       </div>
+                                   </td>
+                               </tr>
+                               <?php endforeach; ?>
+                           </tbody>
+                       </table>
+                   </div>
+
+                   <!-- Paginação -->
+                   <?php if ($total_paginas > 1): ?>
+                   <div class="pagination-container">
+                       <div class="pagination-info">
+                           Mostrando <?= (($pagina_atual - 1) * $registros_por_pagina) + 1 ?> a 
+                           <?= min($pagina_atual * $registros_por_pagina, $total_registros) ?> de 
+                           <?= $total_registros ?> registros
+                       </div>
+                       
+                       <div class="pagination">
+                           <?php if ($pagina_atual > 1): ?>
+                           <a href="?pagina=<?= $pagina_atual - 1 ?>&nome=<?= urlencode($filtro_nome) ?>&departamento=<?= urlencode($filtro_departamento) ?>&status=<?= urlencode($filtro_status) ?>&nivel=<?= urlencode($filtro_nivel) ?>">
+                               <i class="fas fa-chevron-left"></i> Anterior
+                           </a>
+                           <?php endif; ?>
+                           
+                           <?php
+                           $inicio = max(1, $pagina_atual - 2);
+                           $fim = min($total_paginas, $pagina_atual + 2);
+                           
+                           for ($i = $inicio; $i <= $fim; $i++):
+                           ?>
+                           <?php if ($i == $pagina_atual): ?>
+                           <span class="active"><?= $i ?></span>
+                           <?php else: ?>
+                           <a href="?pagina=<?= $i ?>&nome=<?= urlencode($filtro_nome) ?>&departamento=<?= urlencode($filtro_departamento) ?>&status=<?= urlencode($filtro_status) ?>&nivel=<?= urlencode($filtro_nivel) ?>">
+                               <?= $i ?>
+                           </a>
+                           <?php endif; ?>
+                           <?php endfor; ?>
+                           
+                           <?php if ($pagina_atual < $total_paginas): ?>
+                           <a href="?pagina=<?= $pagina_atual + 1 ?>&nome=<?= urlencode($filtro_nome) ?>&departamento=<?= urlencode($filtro_departamento) ?>&status=<?= urlencode($filtro_status) ?>&nivel=<?= urlencode($filtro_nivel) ?>">
+                               Próxima <i class="fas fa-chevron-right"></i>
+                           </a>
+                           <?php endif; ?>
+                       </div>
+                   </div>
+                   <?php endif; ?>
+
+               <?php else: ?>
+                   <div class="sem-registros">
+                       <i class="fas fa-users"></i>
+                       <h3>Nenhum usuário encontrado</h3>
+                       <?php if (!empty($filtro_nome) || !empty($filtro_departamento) || !empty($filtro_status) || !empty($filtro_nivel)): ?>
+                           <p>Nenhum usuário foi encontrado com os filtros aplicados.</p>
+                           <a href="lista_usuarios.php" class="btn-limpar" style="margin-top: 15px;">
+                               <i class="fas fa-eraser"></i>
+                               Limpar Filtros
+                           </a>
+                       <?php else: ?>
+                           <p>Ainda não há usuários cadastrados no sistema.</p>
+                           <a href="adicionar_usuario.php" class="btn-adicionar" style="margin-top: 15px;">
+                               <i class="fas fa-plus"></i>
+                               Adicionar Primeiro Usuário
+                           </a>
+                       <?php endif; ?>
+                   </div>
+               <?php endif; ?>
+           </div>
+       </div>
+   </div>
+
+   <!-- JavaScript -->
+   <script src="assets/js/main.js"></script>
+   <script>
+       // Função para excluir usuário
+       function excluirUsuario(id, nome) {
+           if (!confirm(`Tem certeza que deseja excluir o usuário "${nome}"?`)) {
+               return;
+           }
+
+           if (!confirm(`ATENÇÃO: Esta ação não pode ser desfeita!\n\nO usuário "${nome}" será removido permanentemente do sistema.\n\nDeseja realmente continuar?`)) {
+               return;
+           }
+
+           // Mostrar loading
+           const loadingHtml = `
+               <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                          background: rgba(0,0,0,0.5); display: flex; align-items: center; 
+                          justify-content: center; z-index: 9999;">
+                   <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
+                       <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #667eea; margin-bottom: 15px;"></i>
+                       <p>Excluindo usuário...</p>
+                   </div>
+               </div>
+           `;
+           document.body.insertAdjacentHTML('beforeend', loadingHtml);
+
+           // Fazer requisição AJAX para excluir
+           fetch('controller/excluir_usuario.php', {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({ id: id })
+           })
+           .then(response => response.json())
+           .then(data => {
+               // Remover loading
+               document.querySelector('[style*="z-index: 9999"]').remove();
+               
+               if (data.success) {
+                   // Mostrar mensagem de sucesso
+                   const successAlert = `
+                       <div class="alert alert-success" style="position: fixed; top: 20px; right: 20px; z-index: 1000; min-width: 300px;">
+                           <i class="fas fa-check-circle"></i>
+                           ${data.message}
+                       </div>
+                   `;
+                   document.body.insertAdjacentHTML('beforeend', successAlert);
+                   
+                   // Remover alerta após 3 segundos e recarregar página
+                   setTimeout(() => {
+                       location.reload();
+                   }, 2000);
+               } else {
+                   // Mostrar mensagem de erro
+                   const errorAlert = `
+                       <div class="alert alert-error" style="position: fixed; top: 20px; right: 20px; z-index: 1000; min-width: 300px;">
+                           <i class="fas fa-exclamation-circle"></i>
+                           Erro: ${data.message}
+                       </div>
+                   `;
+                   document.body.insertAdjacentHTML('beforeend', errorAlert);
+                   
+                   // Remover alerta após 5 segundos
+                   setTimeout(() => {
+                       document.querySelector('.alert-error').remove();
+                   }, 5000);
+               }
+           })
+           .catch(error => {
+               // Remover loading
+               document.querySelector('[style*="z-index: 9999"]').remove();
+               
+               console.error('Error:', error);
+               const errorAlert = `
+                   <div class="alert alert-error" style="position: fixed; top: 20px; right: 20px; z-index: 1000; min-width: 300px;">
+                       <i class="fas fa-exclamation-circle"></i>
+                       Erro interno do sistema. Tente novamente.
+                   </div>
+               `;
+               document.body.insertAdjacentHTML('beforeend', errorAlert);
+               
+               setTimeout(() => {
+                   document.querySelector('.alert-error').remove();
+               }, 5000);
+           });
+       }
+
+       // Filtro em tempo real no campo de busca
+       let timeoutBusca;
+       document.getElementById('nome').addEventListener('input', function() {
+           clearTimeout(timeoutBusca);
+           timeoutBusca = setTimeout(() => {
+               document.getElementById('formFiltros').submit();
+           }, 1000);
+       });
+
+       // Submeter filtros automaticamente quando alterar selects
+       document.getElementById('departamento').addEventListener('change', function() {
+           document.getElementById('formFiltros').submit();
+       });
+
+       document.getElementById('status').addEventListener('change', function() {
+           document.getElementById('formFiltros').submit();
+       });
+
+       document.getElementById('nivel').addEventListener('change', function() {
+           document.getElementById('formFiltros').submit();
+       });
+
+       // Ajustar margem do main-content quando sidebar for colapsada
+       function adjustMainContent() {
+           const sidebar = document.querySelector('.sidebar');
+           const mainContent = document.querySelector('.main-content');
+           
+           if (sidebar && mainContent) {
+               if (sidebar.classList.contains('collapsed')) {
+                   mainContent.classList.add('sidebar-collapsed');
+               } else {
+                   mainContent.classList.remove('sidebar-collapsed');
+               }
+           }
+       }
+
+       // Observar mudanças na sidebar
+       const sidebarObserver = new MutationObserver(adjustMainContent);
+       const sidebar = document.querySelector('.sidebar');
+       if (sidebar) {
+           sidebarObserver.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+       }
+
+       // Remover alertas automaticamente após alguns segundos
+       document.addEventListener('DOMContentLoaded', function() {
+           const alerts = document.querySelectorAll('.alert');
+           alerts.forEach(alert => {
+               setTimeout(() => {
+                   alert.style.opacity = '0';
+                   alert.style.transform = 'translateY(-20px)';
+                   setTimeout(() => {
+                       alert.remove();
+                   }, 300);
+               }, 5000);
+           });
+
+           // Ajustar layout inicial
+           adjustMainContent();
+       });
+   </script>
 </body>
 </html>

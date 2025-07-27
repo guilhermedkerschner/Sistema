@@ -53,7 +53,7 @@ return [
                     'files' => ['main' => 'permissoes.php']
                 ],
                 'eaicidadao' => [
-                    'name' => 'Usuários E-aiCidadão',
+                    'name' => 'Usuários Eai-Cidadão',
                     'files' => ['main' => 'usuarios_eaicidadao.php']
                 ]
             ]
@@ -149,11 +149,15 @@ return [
             'order' => 11
         ],
         'files' => [
-            'main' => 'assistencia_habitacao.php'
+            'main' => 'assistencia.php'
         ],
         'menu' => [
             'parent' => true,
             'submenu' => [
+                'paginainicialassistencia' => [
+                    'name' => 'Pagina Inicial',
+                    'files' => ['main' => 'assistencia.php']
+                ],
                 'habitacao' => [
                     'name' => 'Habitação',
                     'files' => ['main' => 'assistencia_habitacao.php']

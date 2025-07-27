@@ -16,7 +16,7 @@ require_once "./core/MenuManager.php";
 $produtor_id = $_GET['id'] ?? null;
 if (!$produtor_id || !is_numeric($produtor_id)) {
     $_SESSION['erro_cadastro'] = "ID do produtor inválido.";
-    header("Location: agricultura_cadastros.php?aba=produtores&erro=1");
+    header("Location: cadastros.php?aba=produtores&erro=1");
     exit;
 }
 
@@ -35,7 +35,7 @@ try {
     
     if ($stmt->rowCount() === 0) {
         $_SESSION['erro_cadastro'] = "Produtor não encontrado.";
-        header("Location: agricultura_cadastros.php?aba=produtores&erro=1");
+        header("Location: cadastros.php?aba=produtores&erro=1");
         exit;
     }
     
@@ -43,7 +43,7 @@ try {
 } catch (PDOException $e) {
     error_log("Erro ao buscar produtor: " . $e->getMessage());
     $_SESSION['erro_cadastro'] = "Erro ao carregar dados do produtor.";
-    header("Location: agricultura_cadastros.php?aba=produtores&erro=1");
+    header("Location: cadastros.php?aba=produtores&erro=1");
     exit;
 }
 
@@ -141,15 +141,17 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
     <link rel="stylesheet" href="assets/css/responsive.css">
     
     <style>
-        /* Container principal - respeitar o menu lateral */
+        /* Garantir que o box-sizing seja aplicado a todos os elementos */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* Container principal - trabalhar DENTRO do espaço disponível do main-content */
         .editar-container {
-            width: 100%;
-            max-width: none;
-            margin: 0;
             padding: 30px;
+            width: 100%;
             min-height: calc(100vh - 70px);
             background: #f8fafc;
-            box-sizing: border-box;
         }
 
         /* Header da página */
@@ -160,8 +162,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             border-radius: 16px;
             margin-bottom: 30px;
             box-shadow: 0 8px 32px rgba(65, 105, 225, 0.15);
-            width: 100%;
-            box-sizing: border-box;
         }
 
         .page-title {
@@ -191,8 +191,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             padding: 20px 30px;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            width: 100%;
-            box-sizing: border-box;
         }
 
         .breadcrumb a {
@@ -215,32 +213,14 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             border-radius: 16px;
             padding: 40px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            width: 100%;
-            box-sizing: border-box;
         }
 
-        /* Grid do formulário - usar mais colunas quando há espaço */
+        /* Grid do formulário - responsivo baseado no espaço disponível */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 25px;
             margin-bottom: 25px;
-        }
-
-        /* Para telas grandes, usar 3 colunas */
-        @media (min-width: 1400px) {
-            .form-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 30px;
-            }
-        }
-
-        /* Para telas extra grandes, usar 4 colunas */
-        @media (min-width: 1800px) {
-            .form-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 35px;
-            }
         }
 
         /* Grupos de formulário */
@@ -265,7 +245,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             font-size: 14px;
             transition: all 0.3s ease;
             background: #fafbfc;
-            box-sizing: border-box;
         }
 
         .form-group input:focus,
@@ -284,8 +263,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             border-radius: 12px;
             border-left: 4px solid #4169E1;
             border: 1px solid #e5e7eb;
-            width: 100%;
-            box-sizing: border-box;
         }
 
         .form-section h3 {
@@ -367,8 +344,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             gap: 10px;
             font-size: 14px;
             font-weight: 500;
-            width: 100%;
-            box-sizing: border-box;
         }
 
         .alert-success {
@@ -395,8 +370,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             align-items: flex-start;
             gap: 12px;
             font-size: 14px;
-            width: 100%;
-            box-sizing: border-box;
         }
 
         .info-box i {
@@ -414,29 +387,21 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             padding-right: 35px;
         }
 
-        /* Layout responsivo - ajustado para respeitar o sidebar */
-        @media (min-width: 1200px) and (max-width: 1399px) {
-            .form-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 25px;
-            }
+        /* Efeitos de hover nos campos */
+        .form-group input:hover,
+        .form-group select:hover {
+            border-color: #9ca3af;
         }
 
-        @media (max-width: 1199px) {
-            .form-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-            }
-            
-            .editar-container {
-                padding: 25px;
-            }
-            
-            .form-container {
-                padding: 30px;
-            }
+        /* Melhorar contraste dos placeholders */
+        .form-group input::placeholder {
+            color: #9ca3af;
+            font-weight: 400;
         }
 
+        /* Responsive Design - Baseado no espaço real disponível */
+        
+        /* Para telas pequenas (mobile) */
         @media (max-width: 768px) {
             .form-grid {
                 grid-template-columns: 1fr;
@@ -466,6 +431,9 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             
             .page-title {
                 font-size: 2rem;
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
             }
             
             .breadcrumb {
@@ -478,38 +446,68 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             }
         }
 
-        @media (max-width: 480px) {
-            .page-title {
-                font-size: 1.8rem;
-                flex-direction: column;
-                gap: 10px;
-                text-align: center;
-            }
-            
-            .form-section h3 {
-                font-size: 1.1rem;
+        /* Para tablets */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
             }
             
             .editar-container {
-                padding: 15px;
+                padding: 25px;
+            }
+            
+            .form-container {
+                padding: 30px;
             }
         }
 
-        /* Garantir que todos os elementos usem box-sizing */
-        * {
-            box-sizing: border-box;
+        /* Para desktops pequenos */
+        @media (min-width: 1025px) and (max-width: 1366px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 25px;
+            }
         }
 
-        /* Efeitos de hover nos campos */
-        .form-group input:hover,
-        .form-group select:hover {
-            border-color: #9ca3af;
+        /* Para desktops médios */
+        @media (min-width: 1367px) and (max-width: 1600px) {
+            .form-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 30px;
+            }
         }
 
-        /* Melhorar contraste dos placeholders */
-        .form-group input::placeholder {
-            color: #9ca3af;
-            font-weight: 400;
+        /* Para desktops grandes */
+        @media (min-width: 1601px) and (max-width: 1920px) {
+            .form-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 35px;
+            }
+            
+            .editar-container {
+                padding: 40px;
+            }
+            
+            .form-container {
+                padding: 50px;
+            }
+        }
+
+        /* Para telas ultra wide */
+        @media (min-width: 1921px) {
+            .form-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 40px;
+            }
+            
+            .editar-container {
+                padding: 50px;
+            }
+            
+            .form-container {
+                padding: 60px;
+            }
         }
 
         /* Animações suaves */
@@ -517,49 +515,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
         .form-group select,
         .btn {
             transition: all 0.3s ease;
-        }
-
-        /* Ajustes específicos para sidebar */
-        @media (min-width: 769px) {
-            /* Quando o sidebar está visível, garantir que não sobreponha */
-            .main-content {
-                margin-left: 0; /* Deixar o CSS base.css gerenciar */
-            }
-        }
-
-        /* Para telas muito pequenas, quando o sidebar fica oculto */
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0 !important;
-                width: 100% !important;
-            }
-        }
-
-        /* Melhorar espaçamento em telas grandes */
-        @media (min-width: 1600px) {
-            .editar-container {
-                padding: 40px 50px;
-            }
-            
-            .form-container {
-                padding: 50px;
-            }
-            
-            .page-header {
-                padding: 50px;
-            }
-        }
-
-        /* Ajustar para ultra wide screens */
-        @media (min-width: 2000px) {
-            .form-grid {
-                grid-template-columns: repeat(5, 1fr);
-                gap: 40px;
-            }
-            
-            .editar-container {
-                padding: 50px 60px;
-            }
         }
     </style>
 </head>
@@ -715,7 +670,7 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
 
                     <!-- Botões -->
                     <div class="form-buttons">
-                        <a href="agricultura_cadastros.php?aba=produtores" class="btn btn-secondary">
+                        <a href="cadastros.php?aba=produtores" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i>
                             Voltar
                         </a>
@@ -818,132 +773,6 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
             })
             .catch(error => {
                 document.querySelector('[style*="z-index: 9999"]').remove();
-                console.error('Error:', error);
-                alert('Erro interno do sistema.');
-            });
-        }
-
-        // Validação do formulário
-        document.getElementById('formEditarProdutor').addEventListener('submit', function(e) {
-            const nome = document.getElementById('nome').value.trim();
-            const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
-            const titular_nome = document.getElementById('titular_nome').value.trim();
-            const titular_cpf = document.getElementById('titular_cpf').value.replace(/\D/g, '');
-            const banco = document.getElementById('banco').value;
-            const agencia = document.getElementById('agencia').value.trim();
-            const conta = document.getElementById('conta').value.trim();
-            const tipo_conta = document.getElementById('tipo_conta').value;
-
-            let erros = [];
-
-            if (!nome) erros.push('Nome é obrigatório');
-            if (!cpf || cpf.length !== 11) erros.push('CPF deve ter 11 dígitos');
-            if (!titular_nome) erros.push('Nome do titular é obrigatório');
-            if (!titular_cpf || titular_cpf.length !== 11) erros.push('CPF do titular deve ter 11 dígitos');
-            if (!banco) erros.push('Banco é obrigatório');
-            if (!agencia) erros.push('Agência é obrigatória');
-            if (!conta) erros.push('Conta é obrigatória');
-            if (!tipo_conta) erros.push('Tipo de conta é obrigatório');
-
-            if (erros.length > 0) {
-                e.preventDefault();
-                alert('Por favor, corrija os seguintes erros:\n\n• ' + erros.join('\n• '));
-                return false;
-            }
-
-            if (!confirm('Confirma a atualização dos dados do produtor?')) {
-                e.preventDefault();
-                return false;
-            }
-        });
-    </script>
-</body>
-</html>
-   <!-- JavaScript -->
-   <script src="assets/js/main.js"></script>
-   <script>
-       // Máscara para CPF
-       function mascaraCPF(cpf) {
-           cpf = cpf.replace(/\D/g, '');
-           cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
-           cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
-           cpf = cpf.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-           return cpf;
-       }
-
-       // Máscara para telefone
-       function mascaraTelefone(telefone) {
-           telefone = telefone.replace(/\D/g, '');
-           if (telefone.length <= 10) {
-               telefone = telefone.replace(/(\d{2})(\d)/, '($1) $2');
-               telefone = telefone.replace(/(\d{4})(\d)/, '$1-$2');
-           } else {
-               telefone = telefone.replace(/(\d{2})(\d)/, '($1) $2');
-               telefone = telefone.replace(/(\d{5})(\d)/, '$1-$2');
-           }
-           return telefone;
-       }
-
-       // Aplicar máscaras
-       document.getElementById('cpf').addEventListener('input', function(e) {
-           e.target.value = mascaraCPF(e.target.value);
-       });
-
-       document.getElementById('titular_cpf').addEventListener('input', function(e) {
-           e.target.value = mascaraCPF(e.target.value);
-       });
-
-       document.getElementById('telefone').addEventListener('input', function(e) {
-           e.target.value = mascaraTelefone(e.target.value);
-       });
-
-       document.getElementById('titular_telefone').addEventListener('input', function(e) {
-           e.target.value = mascaraTelefone(e.target.value);
-       });
-
-       // Função para excluir produtor
-       function excluirProdutor(id, nome) {
-           if (!confirm(`Tem certeza que deseja excluir o produtor "${nome}"?`)) {
-               return;
-           }
-
-           if (!confirm(`ATENÇÃO: Esta ação não pode ser desfeita!\n\nO produtor "${nome}" será removido permanentemente do sistema.\n\nDeseja realmente continuar?`)) {
-               return;
-           }
-
-           // Mostrar loading
-           const loadingHtml = `
-               <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                          background: rgba(0,0,0,0.5); display: flex; align-items: center; 
-                          justify-content: center; z-index: 9999;">
-                   <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
-                       <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #4169E1; margin-bottom: 15px;"></i>
-                       <p>Excluindo produtor...</p>
-                   </div>
-               </div>
-           `;
-           document.body.insertAdjacentHTML('beforeend', loadingHtml);
-
-           fetch('controller/excluir_produtor.php', {
-               method: 'POST',
-               headers: {
-                   'Content-Type': 'application/json',
-               },
-               body: JSON.stringify({ id: id })
-           })
-           .then(response => response.json())
-           .then(data => {
-               document.querySelector('[style*="z-index: 9999"]').remove();
-               
-               if (data.success) {
-                   alert('Produtor excluído com sucesso!');
-                   window.location.href = 'agricultura_cadastros.php?aba=produtores&sucesso_exclusao=1';
-               } else {
-                   alert('Erro ao excluir produtor: ' + data.message);
-               }
-           })
-           .catch(error => {
-               document.querySelector('[style*="z-index: 9999"]').remove();
                console.error('Error:', error);
                alert('Erro interno do sistema.');
            });
@@ -982,6 +811,151 @@ unset($_SESSION['sucesso_edicao'], $_SESSION['erro_edicao']);
                return false;
            }
        });
+
+       // Detectar mudanças nos campos para alertar sobre dados não salvos
+       let formAlterado = false;
+       const campos = document.querySelectorAll('#formEditarProdutor input, #formEditarProdutor select');
+       
+       campos.forEach(campo => {
+           campo.addEventListener('change', function() {
+               formAlterado = true;
+           });
+       });
+
+       // Alertar se sair da página com dados não salvos
+       window.addEventListener('beforeunload', function(e) {
+           if (formAlterado) {
+               e.preventDefault();
+               e.returnValue = '';
+               return 'Você tem alterações não salvas. Deseja realmente sair?';
+           }
+       });
+
+       // Remover alerta quando formulário for submetido
+       document.getElementById('formEditarProdutor').addEventListener('submit', function() {
+           formAlterado = false;
+       });
+
+       // Auto-salvar dados no localStorage (opcional)
+       function autoSalvar() {
+           if (formAlterado) {
+               const dados = {};
+               campos.forEach(campo => {
+                   dados[campo.name] = campo.value;
+               });
+               localStorage.setItem('editar_produtor_' + <?= $produtor['cad_pro_id'] ?>, JSON.stringify(dados));
+           }
+       }
+
+       // Auto-salvar a cada 30 segundos
+       setInterval(autoSalvar, 30000);
+
+       // Restaurar dados salvos automaticamente (se existir)
+       window.addEventListener('load', function() {
+           const dadosSalvos = localStorage.getItem('editar_produtor_' + <?= $produtor['cad_pro_id'] ?>);
+           if (dadosSalvos && confirm('Foram encontrados dados não salvos. Deseja restaurá-los?')) {
+               const dados = JSON.parse(dadosSalvos);
+               Object.keys(dados).forEach(nome => {
+                   const campo = document.querySelector(`[name="${nome}"]`);
+                   if (campo && dados[nome]) {
+                       campo.value = dados[nome];
+                       formAlterado = true;
+                   }
+               });
+           }
+       });
+
+       // Limpar dados salvos quando o formulário for submetido com sucesso
+       document.getElementById('formEditarProdutor').addEventListener('submit', function() {
+           localStorage.removeItem('editar_produtor_' + <?= $produtor['cad_pro_id'] ?>);
+       });
+
+       // Adicionar funcionalidade de atalhos do teclado
+       document.addEventListener('keydown', function(e) {
+           // Ctrl + S para salvar
+           if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+               e.preventDefault();
+               document.getElementById('formEditarProdutor').submit();
+           }
+           
+           // Escape para voltar
+           if (e.key === 'Escape') {
+               if (confirm('Deseja voltar à lista de produtores?')) {
+                   window.location.href = 'cadastros.php?aba=produtores';
+               }
+           }
+       });
+
+       // Melhorar acessibilidade - foco nos campos com erro
+       function focarPrimeiroErro() {
+           const camposObrigatorios = document.querySelectorAll('input[required], select[required]');
+           for (let campo of camposObrigatorios) {
+               if (!campo.value.trim()) {
+                   campo.focus();
+                   campo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                   break;
+               }
+           }
+       }
+
+       // Validação em tempo real
+       campos.forEach(campo => {
+           campo.addEventListener('blur', function() {
+               if (this.hasAttribute('required') && !this.value.trim()) {
+                   this.style.borderColor = '#ef4444';
+               } else {
+                   this.style.borderColor = '#e5e7eb';
+               }
+           });
+
+           campo.addEventListener('input', function() {
+               if (this.style.borderColor === 'rgb(239, 68, 68)' && this.value.trim()) {
+                   this.style.borderColor = '#e5e7eb';
+               }
+           });
+       });
+
+       // Função para destacar campos obrigatórios vazios
+       function destacarCamposObrigatorios() {
+           const camposObrigatorios = document.querySelectorAll('input[required], select[required]');
+           camposObrigatorios.forEach(campo => {
+               if (!campo.value.trim()) {
+                   campo.style.borderColor = '#ef4444';
+                   campo.style.backgroundColor = '#fef2f2';
+               } else {
+                   campo.style.borderColor = '#10b981';
+                   campo.style.backgroundColor = '#f0fdf4';
+               }
+           });
+       }
+
+       // Chamar a função quando a página carregar
+       window.addEventListener('load', destacarCamposObrigatorios);
+
+       // Atualizar indicadores quando os campos mudarem
+       campos.forEach(campo => {
+           campo.addEventListener('input', destacarCamposObrigatorios);
+           campo.addEventListener('change', destacarCamposObrigatorios);
+       });
+
+       // Função para mostrar progresso do preenchimento
+       function atualizarProgresso() {
+           const camposObrigatorios = document.querySelectorAll('input[required], select[required]');
+           const camposPreenchidos = Array.from(camposObrigatorios).filter(campo => campo.value.trim()).length;
+           const progresso = Math.round((camposPreenchidos / camposObrigatorios.length) * 100);
+           
+           // Atualizar título da página com progresso
+           document.title = `Editar Produtor (${progresso}% completo) - Sistema da Prefeitura`;
+       }
+
+       // Atualizar progresso quando campos mudarem
+       campos.forEach(campo => {
+           campo.addEventListener('input', atualizarProgresso);
+           campo.addEventListener('change', atualizarProgresso);
+       });
+
+       // Chamar uma vez no carregamento
+       window.addEventListener('load', atualizarProgresso);
    </script>
 </body>
 </html>
